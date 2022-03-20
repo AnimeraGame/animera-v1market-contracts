@@ -13,6 +13,8 @@ import "./interfaces/IMarsversMarket.sol";
 import "./libraries/TransferHelper.sol";
 import "./libraries/MarsversHelper.sol";
 
+import "hardhat/console.sol";
+
 contract MarsversMarket is EIP712MetaTransaction("MarsversMarket", "1"), ReentrancyGuard, Ownable, IMarsversMarket {
     using EnumerableSet for EnumerableSet.AddressSet;
     using Address for address;
@@ -87,6 +89,15 @@ contract MarsversMarket is EIP712MetaTransaction("MarsversMarket", "1"), Reentra
         emit SellExecuted(seller, msg.sender, nftAddress, nftId, 1);
     }
 
+    struct Order {
+        address maker;
+        address quoteToken;
+        address nftAddress;
+        uint256 price;
+        uint256 deadline;
+        uint256 nftId;
+    }
+
     /**
      * @param sigs The signatures of seller and buyer. sigs[0]: seller signature, sigs[1]: buyer signature
      */
@@ -100,27 +111,49 @@ contract MarsversMarket is EIP712MetaTransaction("MarsversMarket", "1"), Reentra
         uint256 nftId,
         bytes[2] memory sigs
     ) external nonReentrant {
-        require(saleDeadline >= block.timestamp, "MarsMarket: This sale is expired");
-        require(offerDeadline >= block.timestamp, "MarsMarket: This offer is expired");
-        require(_allowedQuoteTokens.contains(quoteToken), "Not allowed quote token");
-        require(offerProvider != msg.sender, "MarsMarket: Can not offer your own item.");
+        Order memory orderOffer = Order(offerProvider, quoteToken, nftAddress, offerPrice, offerDeadline, nftId);
+        require(saleDeadline >= block.timestamp || saleDeadline == 0, "MarsMarket: This sale is expired");
+        require(orderOffer.deadline >= block.timestamp || orderOffer.deadline == 0, "MarsMarket: This offer is expired");
+        require(_allowedQuoteTokens.contains(orderOffer.quoteToken), "Not allowed quote token");
+        require(orderOffer.maker != msg.sender, "MarsMarket: Can not offer your own item.");
 
-        bytes32 msgHash = keccak256(abi.encode(offerProvider, quoteToken, offerPrice, offerDeadline, nftAddress, nftId));
+        bytes32 msgHash = keccak256(
+            abi.encode(
+                orderOffer.maker,
+                orderOffer.quoteToken,
+                orderOffer.price,
+                orderOffer.deadline,
+                orderOffer.nftAddress,
+                orderOffer.nftId
+            )
+        );
 
         bytes32 digest = toTypedMessageHash(msgHash);
         (bytes32 r, bytes32 s, uint8 v) = MarsversHelper.splitSignature(sigs[1]);
 
         address recoverAddress = ecrecover(digest, v, r, s);
-        require(recoverAddress == offerProvider, "MarsMarket: Invalid offer provider signature.");
+        require(recoverAddress == orderOffer.maker, "MarsMarket: Invalid offer provider signature.");
 
         (r, s, v) = MarsversHelper.splitSignature(sigs[0]);
-        msgHash = keccak256(abi.encode(offerProvider, quoteToken, offerPrice, saleDeadline, nftAddress, nftId));
+        msgHash = keccak256(
+            abi.encode(
+                orderOffer.maker,
+                orderOffer.quoteToken,
+                orderOffer.price,
+                saleDeadline,
+                orderOffer.nftAddress,
+                orderOffer.nftId
+            )
+        );
+        digest = toTypedMessageHash(msgHash);
         recoverAddress = ecrecover(digest, v, r, s);
-        console.log('recoverAddress', recoverAddress);
         require(recoverAddress == msg.sender, "MarsMarket: Invalid seller signature.");
 
-        TransferHelper.safeTransferFrom(quoteToken, offerProvider, msg.sender, offerPrice);
-        // emit OfferExecuted(offerProvider, nftAddress, quoteToken, nftId, offerPrice, 1);
+        TransferHelper.safeTransferFrom(orderOffer.quoteToken, orderOffer.maker, msg.sender, orderOffer.price);
+
+        IERC721 nftTokenContract = IERC721(nftAddress);
+        nftTokenContract.transferFrom(msg.sender, orderOffer.maker, orderOffer.nftId);
+        emit OfferExecuted(orderOffer.maker, orderOffer.nftAddress, orderOffer.quoteToken, orderOffer.nftId, orderOffer.price, 1);
     }
 
     function _requireERC721(address nftAddress) private view {

@@ -10,7 +10,7 @@ import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "../commons/EIP712MetaTransaction.sol";
 import "../libraries/TransferHelper.sol";
-import "../libraries/Marsverhelper.sol";
+import "../libraries/MarsversHelper.sol";
 
 import "hardhat/console.sol";
 
@@ -56,7 +56,7 @@ contract SigTest is EIP712MetaTransaction("MarsversMarket", "1"), ReentrancyGuar
 
         bytes32 digest = toTypedMessageHash(msgHash);
 
-        (bytes32 r, bytes32 s, uint8 v) = NFTGalleryHelper.splitSignature(sig);
+        (bytes32 r, bytes32 s, uint8 v) = MarsversHelper.splitSignature(sig);
 
         address recoverAddress = ecrecover(digest, v, r, s);
 
@@ -79,12 +79,12 @@ contract SigTest is EIP712MetaTransaction("MarsversMarket", "1"), ReentrancyGuar
         bytes32 msgHash = keccak256(abi.encode(offerProvider, quoteToken, offerPrice, offerDeadline, nftAddress, nftId));
 
         bytes32 digest = toTypedMessageHash(msgHash);
-        (bytes32 r, bytes32 s, uint8 v) = NFTGalleryHelper.splitSignature(sigs[1]);
+        (bytes32 r, bytes32 s, uint8 v) = MarsversHelper.splitSignature(sigs[1]);
 
         address recoverAddress = ecrecover(digest, v, r, s);
         require(recoverAddress == offerProvider, "MarsMarket: Invalid offer provider signature.");
 
-        (r, s, v) = NFTGalleryHelper.splitSignature(sigs[0]);
+        (r, s, v) = MarsversHelper.splitSignature(sigs[0]);
         msgHash = keccak256(abi.encode(offerProvider, quoteToken, offerPrice, saleDeadline, nftAddress, nftId));
         recoverAddress = ecrecover(digest, v, r, s);
         require(recoverAddress == msg.sender, "MarsMarket: Invalid seller signature.");

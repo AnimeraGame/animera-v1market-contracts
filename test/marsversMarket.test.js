@@ -18,9 +18,9 @@ const {
   Wallet
 } = ethers;
 
-describe('NFTGallery721', function () {
+describe('MarsversMarket', function () {
   before(async function () {
-    this.NFTGallery = await ethers.getContractFactory('NFTGallery721');
+    this.NFTGallery = await ethers.getContractFactory('MarsversMarket');
     this.SigTest = await ethers.getContractFactory('SigTest');
     this.MockERC20 = await ethers.getContractFactory('MockERC20');
     this.ERC721Test = await ethers.getContractFactory('ERC721Test');
@@ -50,7 +50,7 @@ describe('NFTGallery721', function () {
     beforeEach(async function () {
       await this.nft721.connect(this.seller).setApprovalForAll(this.nftGallery.address, true);
       await this.quoteToken.connect(this.buyer).approve(this.nftGallery.address, ethers.constants.MaxUint256);
-    })
+    });
     it('Signature test', async function () {
       const chainId = await getChainId();
       const sellPrice = getBigNumber(2);
@@ -118,63 +118,84 @@ describe('NFTGallery721', function () {
       ).privateKey;
       const buyerSig = getEIP712Signature(digest, buerPrivateKey);
 
-      await this.nftGallery.connect(this.buyer).executeSell(
-        this.seller.address,
-        this.quoteToken.address,
-        sellPrice,
-        sellDeadline,
-        this.nft721.address,
-        nftId,
-        [sellerSig, buyerSig]
-      );
+      await this.nftGallery
+        .connect(this.buyer)
+        .executeSell(
+          this.seller.address,
+          this.quoteToken.address,
+          sellPrice,
+          sellDeadline,
+          this.nft721.address,
+          nftId,
+          [sellerSig, buyerSig]
+        );
     });
     it('Should execute offer', async function () {
       const chainId = await getChainId();
       const offerPrice = getBigNumber(3);
       const sellDeadline = ~~(new Date().getTime() / 1000 + 2000);
       const offerDeadline = ~~(new Date().getTime() / 1000 + 1000);
-      const nftId = 1;
-      // address offerProvider,
-      //   address quoteToken,
-      //   uint256 offerPrice,
-      //   uint256 saleDeadline,
-      //   uint256 offerDeadline,
-      //   address nftAddress,
-      //   uint256 nftId,
-      //   bytes[2] memory sigs
-      // bytes32 msgHash = keccak256(abi.encode(offerProvider, quoteToken, offerPrice, offerDeadline, nftAddress, nftId));
-      const dataTypesBuyer = ['address', 'address', 'uint256', 'uint256', 'address', 'uint256'];
-      const dataValuesBuyer = [this.buyer.address, this.quoteToken.address, offerPrice, offerDeadline, this.nft721.address, nftId];
+      const nftId = 2;
 
-      const digestBuyer = getApprovalDigest(NFT_GALLERY_NAME, this.nftGallery.address, chainId, dataTypesBuyer, dataValuesBuyer);
+      const dataTypesBuyer = ['address', 'address', 'uint256', 'uint256', 'address', 'uint256'];
+      const dataValuesBuyer = [
+        this.buyer.address,
+        this.quoteToken.address,
+        offerPrice,
+        offerDeadline,
+        this.nft721.address,
+        nftId
+      ];
+
+      const digestBuyer = getApprovalDigest(
+        NFT_GALLERY_NAME,
+        this.nftGallery.address,
+        chainId,
+        dataTypesBuyer,
+        dataValuesBuyer
+      );
       const buyerPrivateKey = Wallet.fromMnemonic(
         config.networks[hre.network.name].accounts.mnemonic,
         "m/44'/60'/0'/0/2"
       ).privateKey;
       const buyerSig = getEIP712Signature(digestBuyer, buyerPrivateKey);
-      
+
       // msgHash = keccak256(abi.encode(offerProvider, quoteToken, offerPrice, saleDeadline, nftAddress, nftId));
       const dataTypesSeller = ['address', 'address', 'uint256', 'uint256', 'address', 'uint256'];
-      const dataValuesSeller = [this.buyer.address, this.quoteToken.address, offerPrice, sellDeadline, this.nft721.address, nftId];
-      const digestSeller = getApprovalDigest(NFT_GALLERY_NAME, this.nftGallery.address, chainId, dataTypesSeller, dataValuesSeller);
+      const dataValuesSeller = [
+        this.buyer.address,
+        this.quoteToken.address,
+        offerPrice,
+        sellDeadline,
+        this.nft721.address,
+        nftId
+      ];
+      const digestSeller = getApprovalDigest(
+        NFT_GALLERY_NAME,
+        this.nftGallery.address,
+        chainId,
+        dataTypesSeller,
+        dataValuesSeller
+      );
       const sellerPrivateKey = Wallet.fromMnemonic(
         config.networks[hre.network.name].accounts.mnemonic,
         "m/44'/60'/0'/0/1"
       ).privateKey;
 
       const sellerSig = getEIP712Signature(digestSeller, sellerPrivateKey);
-      console.log('this.seller', this.seller.address);
 
-      await this.nftGallery.connect(this.seller).executeOffer(
-        this.buyer.address,
-      this.quoteToken.address,
-      offerPrice,
-      sellDeadline,
-      offerDeadline,
-      this.nft721.address,
-      nftId,
-      [sellerSig, buyerSig]
-      )
+      await this.nftGallery
+        .connect(this.seller)
+        .executeOffer(
+          this.buyer.address,
+          this.quoteToken.address,
+          offerPrice,
+          sellDeadline,
+          offerDeadline,
+          this.nft721.address,
+          nftId,
+          [sellerSig, buyerSig]
+        );
     });
   });
 });

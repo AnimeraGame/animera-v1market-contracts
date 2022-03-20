@@ -12,7 +12,7 @@ const TWAP_ORACLE_PRICE_FEED_WETH_USDC = {
   rinkeby: '0xc86718f161412Ace9c0dC6F81B26EfD4D3A8F5e0'
 };
 
-const NFT_GALLERY_NAME = 'NFTGallery721';
+const NFT_GALLERY_NAME = 'MarsversMarket';
 const NFT_GALLERY_VERSION = '1';
 
 module.exports = {
