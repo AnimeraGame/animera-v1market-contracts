@@ -1,28 +1,11 @@
 const { ethers } = require('hardhat');
 const { BigNumber } = ethers;
-const ZERO_ADDRESS = ethers.constants.AddressZero;
-const TENOR_UNIT = 4 * 7 * 24 * 3600; // 4 weeks
-const GRACE_PERIOD = 2 * 7 * 24 * 3600; // 2 weeks
-const NFT_TYPE = {
-  ERC721: 0,
-  ERC1155: 1
-};
+const { ecsign } = require('ethereumjs-util');
 
-const STATUS = {
-  AVOID_ZERO: 0, // just for avoid zero
-  LISTED: 1, // after the loan have been created --> the next status will be APPROVED
-  APPROVED: 2, // in this status the loan has a lender -- will be set after approveLoan(). loan fund => borrower
-  LOANACTIVED: 3, // NFT was brought from opensea by agent and staked in TribeOne - relayNFT()
-  LOANPAID: 4, // loan was paid fully but still in TribeOne
-  WITHDRAWN: 5, // the final status, the collateral returned to the borrower or to the lender withdrawNFT()
-  FAILED: 6, // NFT buying order was failed in partner's platform such as opensea...
-  CANCELLED: 7, // only if loan is LISTED - cancelLoan()
-  DEFAULTED: 9, // Grace period = 15 days were passed from the last payment schedule
-  LIQUIDATION: 10, // NFT was put in marketplace
-  POSTLIQUIDATION: 11, /// NFT was sold
-  RESTWIDRAWN: 12, // user get back the rest of money from the money which NFT set is sold in marketplace
-  RESTLOCKED: 13 // Rest amount was forcely locked because he did not request to get back with in 2 weeks (GRACE PERIODS)
-};
+const {
+  utils: { keccak256, defaultAbiCoder, toUtf8Bytes, solidityPack, hexlify }
+} = ethers;
+const ZERO_ADDRESS = ethers.constants.AddressZero;
 
 // Defaults to e18 using amount * 10^18
 function getBigNumber(amount, decimals = 18) {
@@ -35,8 +18,9 @@ async function getSignatures(signers, hexCallData) {
   const vs = [];
 
   for (const signer of signers) {
-    const flatSig = await signer.signMessage(ethers.utils.arrayify(ethers.utils.keccak256(hexCallData)));
+    const flatSig = await signer.signMessage(ethers.utils.arrayify(ethers.utils.keccak256()));
     const splitSig = ethers.utils.splitSignature(flatSig);
+
     rs.push(splitSig.r);
     ss.push(splitSig.s);
     vs.push(splitSig.v);
@@ -45,12 +29,52 @@ async function getSignatures(signers, hexCallData) {
   return { rs, ss, vs };
 }
 
+// this function is for EIP 191
+async function getFlatSignature(signer, hexCallData) {
+  // const flatSig = await signer.signMessage(hexCallData);
+  // const flatSig = await signer.signMessage(ethers.utils.arrayify(ethers.utils.keccak256(hexCallData)));
+  const flatSig = await signer.signMessage(ethers.utils.arrayify(hexCallData));
+  return flatSig;
+}
+
+function getDomainSeparator(name, chainId, tokenAddress) {
+  return keccak256(
+    defaultAbiCoder.encode(
+      ['bytes32', 'bytes32', 'bytes32', 'uint256', 'address'],
+      [
+        keccak256(toUtf8Bytes('EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)')),
+        keccak256(toUtf8Bytes(name)),
+        keccak256(toUtf8Bytes('1')),
+        chainId,
+        tokenAddress
+      ]
+    )
+  );
+}
+
+function getApprovalDigest(contractName, contractAddress, chainId, types, values) {
+  const DOMAIN_SEPARATOR = getDomainSeparator(contractName, chainId, contractAddress);
+
+  return keccak256(
+    solidityPack(
+      ['bytes1', 'bytes1', 'bytes32', 'bytes32'],
+      ['0x19', '0x01', DOMAIN_SEPARATOR, keccak256(defaultAbiCoder.encode(types, values))]
+    )
+  );
+}
+
+function getEIP712Signature(digest, privateKey) {
+  const { v, r, s } = ecsign(Buffer.from(digest.slice(2), 'hex'), Buffer.from(privateKey.slice(2), 'hex'));
+  const sig = hexlify(r) + hexlify(s).slice(2) + hexlify(v).slice(2);
+  return sig;
+}
+
 module.exports = {
   ZERO_ADDRESS,
-  NFT_TYPE,
-  STATUS,
-  TENOR_UNIT,
-  GRACE_PERIOD,
   getBigNumber,
-  getSignatures
+  getSignatures,
+  getFlatSignature,
+  getDomainSeparator,
+  getApprovalDigest,
+  getEIP712Signature
 };

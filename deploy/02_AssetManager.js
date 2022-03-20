@@ -4,15 +4,15 @@ module.exports = async function ({ ethers, getNamedAccounts, deployments, getCha
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  await deploy('Marketplace', {
+  const WETH = '0xc778417e063141139fce010982780140aa0cd5ab'; // rinkeby Uniswap WETH address
+  const USDC = '0xD4D5c5D939A173b9c18a6B72eEaffD98ecF8b3F6'; // rinkeby Uniswap USDC address
+
+  await deploy('AssetManager', {
     from: deployer,
     log: true,
-    args: [
-      "0x3bA21a3c0A32263e35e29A4038CCB972f34BcBB6", // on mumbai
-      0
-    ],
+    args: [WETH, USDC],
     deterministicDeployment: false
   });
 };
 
-module.exports.tags = ['TribeOne', 'MarsMarketplace', 'MarsVerse'];
+module.exports.tags = ['AssetManager', 'TribeOne'];

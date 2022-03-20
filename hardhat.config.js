@@ -65,14 +65,20 @@ module.exports = {
       gasPrice: 5000000000,
       gasMultiplier: 2,
     },
-    mumbai: {
-      url: "https://rpc-mumbai.maticvigil.com/",
-      accounts,
-      chainId: 80001,
+    bscTest: {
+      url: "https://data-seed-prebsc-1-s1.binance.org:8545",
+      chainId: 97,
+      accounts: {mnemonic: process.env.MNEMONIC},
       live: true,
       saveDeployments: true,
-      tags: ["staging"],
       gasMultiplier: 2,
+    },
+    bscMain: {
+      url: "https://bsc-dataseed.binance.org/",
+      chainId: 56,
+      accounts: {mnemonic: process.env.MNEMONIC},
+      live: true,
+      saveDeployments: true
     }
   },
   etherscan: {
@@ -81,16 +87,9 @@ module.exports = {
   paths: {
     deploy: "deploy",
     deployments: "deployments",
-    sources: './contracts',
+    sources: "contracts",
     tests: "test"
   },
-
-  // paths: {
-  //   sources: './contracts',
-  //   tests: './test',
-  //   cache: './cache',
-  //   artifacts: './artifacts'
-  // },
   // contractSizer: {
   //   alphaSort: true,
   //   disambiguatePaths: true,
@@ -100,7 +99,7 @@ module.exports = {
     timeout: 300000
   },
   solidity: {
-    version: '0.8.0',
+    version: "0.8.4",
     settings: {
       optimizer: {
         enabled: true,
