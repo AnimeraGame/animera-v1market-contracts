@@ -118,15 +118,14 @@ describe('MarsversMarket', function () {
       ).privateKey;
       const buyerSig = getEIP712Signature(digest, buerPrivateKey);
 
+      const sellId = 1;
+      // uint256[4] memory uints, // sellId, price, deadline, nftId
+      //   address[3] memory addrs, // seller, quoteToken, nftAddress
       await this.nftGallery
         .connect(this.buyer)
         .executeSell(
-          this.seller.address,
-          this.quoteToken.address,
-          sellPrice,
-          sellDeadline,
-          this.nft721.address,
-          nftId,
+          [sellId, sellPrice, sellDeadline, nftId],
+          [this.seller.address, this.quoteToken.address, this.nft721.address],
           [sellerSig, buyerSig]
         );
     });
@@ -184,16 +183,14 @@ describe('MarsversMarket', function () {
 
       const sellerSig = getEIP712Signature(digestSeller, sellerPrivateKey);
 
+      // uint256[5] memory uints, // offerId, offerPrice, saleDeadline, offerDeadline, nftId
+      // address[] memory addrs,  // offerProvider, quoteToken, nftAddress
+      const offerId = 1;
       await this.nftGallery
         .connect(this.seller)
         .executeOffer(
-          this.buyer.address,
-          this.quoteToken.address,
-          offerPrice,
-          sellDeadline,
-          offerDeadline,
-          this.nft721.address,
-          nftId,
+          [offerId, offerPrice, sellDeadline, offerDeadline, nftId],
+          [this.buyer.address, this.quoteToken.address, this.nft721.address],
           [sellerSig, buyerSig]
         );
     });
